@@ -42,7 +42,6 @@ class PresetEditorDialog(QDialog):
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setMaximumHeight(280)
         self.scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
 
         self.rows_container = QWidget()
@@ -123,6 +122,9 @@ class PresetEditorDialog(QDialog):
         rows = [i.text().strip() for i in self.row_inputs if i.text().strip()]
         if not rows:
             QMessageBox.warning(self, "Błąd", "Preset musi zawierać co najmniej jeden wiersz.")
+            return
+        if len(rows) != len(set(rows)):
+            QMessageBox.warning(self, "Błąd", "Nazwy kolumn w presecie nie mogą się powtarzać.")
             return
 
         existing = self.presets_manager.get_preset_names()

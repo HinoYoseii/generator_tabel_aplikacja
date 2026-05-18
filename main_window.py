@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,QGroupBox, QPushButton, QLabel, QFileDialog, QMessageBox, QApplication)
 from data_processor import DataProcessor
-from column_presets import ColumnPresets
+from preset_manager import PresetManager
 from table_generator import TableGenerator
-from column_mapping_widget import ColumnMappingWidget
+from row_mapping_widget import RowMappingWidget
 from config_widget import ConfigWidget
 
 
@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
 
         self.data_processor = DataProcessor()
         self.table_generator = TableGenerator()
-        self.presets_manager = ColumnPresets()
+        self.presets_manager = PresetManager()
         self.processed_df = None
 
         self._setup_ui()
@@ -41,16 +41,17 @@ class MainWindow(QMainWindow):
         self.config_widget.nr_zal_combo.currentIndexChanged.connect(self._validate_process_button)
         self.config_widget.dlugosci_combo.currentIndexChanged.connect(self._validate_process_button)
         self.config_widget.skala_combo.currentIndexChanged.connect(self._validate_process_button)
+        self.config_widget.width_input.valueChanged.connect(self._validate_process_button)
         self.config_widget.preset_combo.currentIndexChanged.connect(self._apply_preset)
         self.config_widget.preset_changed.connect(self._apply_preset)
         main_layout.addWidget(self.config_widget)
 
         # Mapowanie kolumn
-        mapping_label = QLabel("3. Mapowanie kolumn")
+        mapping_label = QLabel("3. Mapowanie wierszy")
         mapping_label.setStyleSheet("font-weight: bold;")
         main_layout.addWidget(mapping_label)
-        self.column_mapping_widget = ColumnMappingWidget()
-        main_layout.addWidget(self.column_mapping_widget, stretch=1)
+        self.row_mapping_widget = RowMappingWidget()
+        main_layout.addWidget(self.row_mapping_widget, stretch=1)
 
         # Przyciski akcji
         button_layout = QHBoxLayout()
@@ -80,6 +81,11 @@ class MainWindow(QMainWindow):
     def _set_status(self, text: str):
         self.status_label.setText(text)
         QApplication.processEvents()
+    
+    def _validate_process_button(self):
+        self.process_button.setEnabled(self.config_widget.is_valid())
+        self.export_button.setEnabled(False)
+        self.generate_button.setEnabled(False)
 
     def _load_csv(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik CSV", "", "CSV Files (*.csv);;All Files (*)")
@@ -98,36 +104,40 @@ class MainWindow(QMainWindow):
         if self.data_processor.df is None:
             return
         if self.config_widget.preset_combo.currentIndex() == 0:
-            self.column_mapping_widget.setup_columns([], [])
+            self.row_mapping_widget.setup_rows([], [])
             self._validate_process_button()
             return
 
         preset_type = self.config_widget.get_preset_name()
-        preset_columns = self.presets_manager.get_preset_columns(preset_type)
-        self.column_mapping_widget.setup_columns(preset_columns, self.data_processor.get_columns())
-        self._validate_process_button()
-        self._set_status(f"Zastosowano preset {preset_type} z {len(preset_columns)} kolumnami\nUzupełnij mapowanie kolumn i kliknij 'Przetwórz dane'")
+        preset_rows = self.presets_manager.get_preset_rows(preset_type)
 
-    def _validate_process_button(self):
-        self.process_button.setEnabled(self.config_widget.is_valid())
+        if len(preset_rows) != len(set(preset_rows)):
+            QMessageBox.warning(None, "Błąd", "Wykryto w presecie powtarzające się nazwy wierszy. Edytuj preset lub wybierz inny.")
+            self._set_status(f"Wykryto w presecie powtarzające się nazwy wierszy. Edytuj preset lub wybierz inny.")
+            return
+    
+        self.row_mapping_widget.setup_rows(preset_rows, self.data_processor.get_columns())
+        self._validate_process_button()
+        self._set_status(f"Zastosowano preset {preset_type} z {len(preset_rows)} wierszami\nUzupełnij mapowanie i kliknij 'Przetwórz dane'")
 
     def _process_data(self):
-        column_mapping = self.column_mapping_widget.get_column_mapping()
-        if not column_mapping:
-            QMessageBox.warning(self, "Brak mapowania", "Musisz zmapować przynajmniej jedną kolumnę")
+        row_mapping = self.row_mapping_widget.get_row_mapping()
+        if not row_mapping:
+            QMessageBox.warning(self, "Brak mapowania", "Musisz zmapować przynajmniej jeden wiersz")
             return
 
         try:
             self._set_status("Przetwarzanie danych...")
             self.processed_df = self.data_processor.process_data(
                 nr_zal_column=self.config_widget.get_nr_zal_col(),
-                column_mapping=column_mapping,
+                row_mapping=row_mapping,
                 length_column=self.config_widget.get_dlugosci_col(),
-                scale_column=self.config_widget.get_scale_column(),
+                scale_column=self.config_widget.get_scale(),
             )
             
             self.export_button.setEnabled(True)
             self.generate_button.setEnabled(True)
+            QMessageBox.information(self, "Sukces", f"Przetworzono dane. Możesz eksportować dane lub generować tabele")
             self._set_status(f"Przetworzono dane: {len(self.processed_df)} wierszy\nMożesz eksportować lub generować tabele")
 
         except Exception as e:
@@ -142,7 +152,7 @@ class MainWindow(QMainWindow):
         try:
             self.processed_df.to_csv(file_path, index=False)
             QMessageBox.information(self, "Sukces", f"Dane wyeksportowane do {file_path}")
-            self._set_status(f"Wyeksportowano dane do {file_path}")
+            self._set_status(f"Dane wyeksportowane do {file_path}")
         except Exception as e:
             QMessageBox.critical(self, "Błąd", f"Błąd eksportu: {e}")
             self._set_status(f"Błąd eksportu: {e}")
@@ -151,15 +161,15 @@ class MainWindow(QMainWindow):
         self._set_status("Generowanie tabel...")
 
         try:
-            column_mapping = self.column_mapping_widget.get_column_mapping()
-            config = self.config_widget.build_table_config(column_mapping)
+            row_mapping = self.row_mapping_widget.get_row_mapping()
+            config = self.config_widget.build_table_config(row_mapping)
             files = self.table_generator.generate_all_tables(
                 df=self.processed_df,
                 nr_zal_column=self.config_widget.get_nr_zal_col(),
                 config=config
             )
             if not files:
-                QMessageBox.critical(self, "Błąd", "\nNie udało się wygenerować tabel. Sprawdź dane wejściowe i mapowanie kolumn.")
+                QMessageBox.critical(self, "Błąd", "\nNie udało się wygenerować tabel. Sprawdź dane wejściowe i mapowanie wierszy.")
                 return
             QMessageBox.information(self, "Sukces", f"Wygenerowano {len(files)} tabel w folderze 'tabele'")
             self._set_status(f"Wygenerowano {len(files)} tabel w folderze 'tabele'")

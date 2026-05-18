@@ -1,4 +1,28 @@
-{
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
+
+@dataclass
+class TableConfig:
+    enabled_rows: list[str]
+    bg_color_map: dict
+    text_color_map: dict
+    label_width: int
+    scale: float | str | None
+
+@dataclass
+class RowStyle:
+    """ Reprezentuje style kolumn """
+    text_color: Optional[List[int]] = None
+    background_color: Optional[List[int]] = None
+
+@dataclass
+class RowPreset:
+    """ Reprezentuje preset wierszy """
+    name: str
+    rows: List[str]
+    styles: Optional[Dict[str, RowStyle]] = None
+
+DEFAULT_ROW_PRESETS = {
     "presets": [
         {
             "name": "DBP",
@@ -7,6 +31,9 @@
                 "Warunki wodne",
                 "Grupy nośności",
                 "Poziom posadowienia",
+                "Poziom wzmocnienia",
+                "Przydatności gruntów/skał na potrzeby budownictwa drogowego",
+                "Przydatności gruntów/skał z wykopów do wykonania budowli ziemnych",
                 "Odległości",
                 "Kilometraż"
             ],

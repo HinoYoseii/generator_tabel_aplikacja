@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import pyqtSignal
-from table_config import TableConfig
+from models import TableConfig
 
 from preset_editor_dialog import PresetEditorDialog
 
@@ -20,7 +20,7 @@ class ConfigWidget(QGroupBox):
         self.nr_zal_combo.addItem("-- Wybierz kolumnę --", None)
         self.nr_zal_combo.setEnabled(False)
         self.nr_zal_combo.setToolTip("Kolumna po której będą grupowane tabelki.")
-        config_layout.addRow("Kolumna z numerami załączników/nazwami przekrojów:", self.nr_zal_combo)
+        config_layout.addRow("Kolumna z unikalną nazwą przekrojów:", self.nr_zal_combo)
 
         # Długości odcinków
         self.dlugosci_combo = QComboBox()
@@ -43,9 +43,8 @@ class ConfigWidget(QGroupBox):
         self.width_input.setMinimum(50)
         self.width_input.setValue(600)
         self.width_input.setSuffix(" px")
-        config_layout.addRow("Szerokość kolumn nagłówkowych:", self.width_input)
+        config_layout.addRow("Szerokość wierszy nagłówkowych:", self.width_input)
 
-        # Preset combo + edit/new buttons in a single row widget
         preset_row = QWidget()
         preset_h = QHBoxLayout(preset_row)
         preset_h.setContentsMargins(0, 0, 0, 0)
@@ -59,7 +58,8 @@ class ConfigWidget(QGroupBox):
 
         self.edit_preset_btn = QToolButton()
         self.edit_preset_btn.setText("✎")
-        self.edit_preset_btn.setFixedSize(28, 28)
+        self.edit_preset_btn.setStyleSheet("font-size: 18px;")
+        self.edit_preset_btn.setFixedSize(30, 30)
         self.edit_preset_btn.setToolTip("Edytuj wybrany preset")
         self.edit_preset_btn.clicked.connect(self._open_edit_preset)
         self.edit_preset_btn.setEnabled(False)
@@ -67,7 +67,7 @@ class ConfigWidget(QGroupBox):
 
         self.new_preset_btn = QToolButton()
         self.new_preset_btn.setText("+")
-        self.new_preset_btn.setFixedSize(28, 28)
+        self.new_preset_btn.setFixedSize(30, 30)
         self.new_preset_btn.setToolTip("Utwórz nowy preset")
         self.new_preset_btn.clicked.connect(self._open_new_preset)
         preset_h.addWidget(self.new_preset_btn)
@@ -91,14 +91,14 @@ class ConfigWidget(QGroupBox):
             self._refresh_preset_combo(select_name=dlg.get_saved_name())
         elif result == PresetEditorDialog.Deleted:
             self._refresh_preset_combo()
-        self.preset_changed.emit()  # always emit, main window decides what to do
+        self.preset_changed.emit()
 
     def _open_new_preset(self):
         dlg = PresetEditorDialog(self.presets_manager, preset_name=None, parent=self)
         result = dlg.exec()
         if result == QDialog.DialogCode.Accepted:
             self._refresh_preset_combo(select_name=dlg.get_saved_name())
-        self.preset_changed.emit()  # always emit
+        self.preset_changed.emit()
 
     def _refresh_preset_combo(self, select_name: str | None = None):
         self.preset_combo.blockSignals(True)
@@ -137,20 +137,11 @@ class ConfigWidget(QGroupBox):
         self.new_preset_btn.setEnabled(True)
 
     def get_scale(self):
-        """Zwraca nazwę skali preset lub '__col__:nazwa_kolumny'"""
+        """Zwraca nazwę skali preset lub nazwe kolumny ze skalą"""
         data = self.skala_combo.currentData()
         if data:
-            return data
+            return data[len("__col__:"):]
         return self.skala_combo.currentText()
-
-    def is_scale_from_column(self) -> bool:
-        data = self.skala_combo.currentData()
-        return isinstance(data, str) and data.startswith("__col__:")
-
-    def get_scale_column(self) -> str | None:
-        if self.is_scale_from_column():
-            return self.skala_combo.currentData()[len("__col__:"):]
-        return None
 
     def is_valid(self):
         """Zwraca True jeśli wszystkie wymagane pola są wypełnione"""
@@ -158,6 +149,7 @@ class ConfigWidget(QGroupBox):
             self.preset_combo.currentIndex() > 0
             and self.nr_zal_combo.currentIndex() > 0
             and self.dlugosci_combo.currentIndex() > 0
+            and self.skala_combo.currentIndex() > 0
         )
 
     def get_nr_zal_col(self):
@@ -166,9 +158,6 @@ class ConfigWidget(QGroupBox):
     def get_dlugosci_col(self):
         return self.dlugosci_combo.currentText()
 
-    def get_scale(self):
-        return self.skala_combo.currentText()
-
     def get_label_width(self):
         return self.width_input.value()
 
@@ -176,15 +165,13 @@ class ConfigWidget(QGroupBox):
         return self.preset_combo.currentText()
     
     def build_table_config(self, column_mapping: dict) -> "TableConfig":
-        from table_config import TableConfig
         preset_name = self.get_preset_name()
         bg_map, text_map = self.presets_manager.get_style_maps(preset_name=preset_name)
 
         return TableConfig(
-            enabled_columns=list(column_mapping.keys()),
+            enabled_rows=list(column_mapping.keys()),
             bg_color_map=bg_map,
             text_color_map=text_map,
             label_width=self.get_label_width(),
-            scale=None if self.is_scale_from_column() else self.get_scale(),
-            scale_column=self.get_scale_column(),
+            scale=self.get_scale()
         )

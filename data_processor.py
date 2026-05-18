@@ -3,7 +3,7 @@ from typing import List, Optional
 
 class DataProcessor:
     def __init__(self):
-        self.df: Optional[pd.DataFrame] = None
+        self.df: pd.DataFrame = None
         self.input_columns: List[str] = []
         
     def load_csv(self, file_path: str) -> bool:
@@ -62,26 +62,36 @@ class DataProcessor:
         result.append((display_val, current_sum))
         return result
     
-    def process_data(self, nr_zal_column: str, column_mapping: dict, length_column: str, scale_column: str | None = None) -> pd.DataFrame:
+    def process_data(self, nr_zal_column: str, row_mapping: dict, length_column: str, scale_column: str | None = None) -> pd.DataFrame:
         if self.df is None:
             raise ValueError("No data loaded")
+        
+        def validate_numeric_column(column_name: str, df: pd.DataFrame) -> None:
+            non_numeric_mask = pd.to_numeric(df[column_name], errors='coerce').isna()
+            if non_numeric_mask.any():
+                non_numeric_values = df.loc[non_numeric_mask, column_name].unique()
+                raise ValueError(f"\nWybrana kolumna '{column_name}' zawiera wartości nienumeryczne: {non_numeric_values.tolist()}")
+        
+        validate_numeric_column(length_column, self.df)
 
-        const_mapping = {k: v[len("__const__:"):] for k, v in column_mapping.items() if v and v.startswith("__const__:")}
-        col_mapping = {k: v for k, v in column_mapping.items() if v and not v.startswith("__const__:")}
+        const_mapping = {k: v[len("__const__:"):] for k, v in row_mapping.items() if v and v.startswith("__const__:")}
+        col_mapping = {k: v for k, v in row_mapping.items() if v and not v.startswith("__const__:")}
 
-        columns_needed = [nr_zal_column, length_column] + list(col_mapping.values())
-        if scale_column and scale_column in self.df.columns:
-            columns_needed.append(scale_column)
-        columns_needed = list(dict.fromkeys(columns_needed))  # usuń duplikaty
+        rows_required = [nr_zal_column, length_column] + list(col_mapping.values())
+        
+        if scale_column in self.df.columns:
+            validate_numeric_column(scale_column, self.df)
+            rows_required.append(scale_column)
 
-        working_df = self.df[columns_needed].copy()
+        rows_required = list(dict.fromkeys(rows_required))
+
+        working_df = self.df[rows_required].copy()
 
         result_rows = []
 
         for nr_zal, group in working_df.groupby(nr_zal_column, sort=False):
             group = group.reset_index(drop=True)
             total_length = group[length_column].sum()
-
             aggregated = {}
 
             for output_col, input_col in col_mapping.items():
