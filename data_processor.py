@@ -110,16 +110,8 @@ class DataProcessor:
                     row[scale_column] = group[scale_column].iloc[0]
 
                 for output_col, agg_data in aggregated.items():
-                    if output_col == "Odległości":
-                        if i < len(agg_data):
-                            row["Odległości"] = f"{agg_data[i][1]}m"
-                            row["Odległości len"] = agg_data[i][1]
-                        else:
-                            row["Odległości"] = ''
-                            row["Odległości len"] = ''
-                    else:
-                        row[output_col] = agg_data[i][0] if i < len(agg_data) else ''
-                        row[f"{output_col} len"] = agg_data[i][1] if i < len(agg_data) else ''
+                    row[output_col] = agg_data[i][0] if i < len(agg_data) else ''
+                    row[f"{output_col} len"] = agg_data[i][1] if i < len(agg_data) else ''
 
                 result_rows.append(row)
 
