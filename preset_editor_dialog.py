@@ -1,6 +1,5 @@
-from PyQt6.QtWidgets import *
+from PyQt6.QtWidgets import QDialog, QLineEdit, QVBoxLayout, QLabel,QHBoxLayout, QPushButton, QScrollArea, QWidget, QToolButton, QMessageBox
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
 
 
 class PresetEditorDialog(QDialog):

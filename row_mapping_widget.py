@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QScrollArea, QComboBox, QLabel,
-    QLineEdit, QPushButton, QButtonGroup, QSizePolicy, QFrame
+    QLineEdit, QPushButton, QButtonGroup, QSizePolicy
 )
 
 class MyComboBox(QComboBox):

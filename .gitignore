@@ -7,3 +7,4 @@ przesucha.csv
 build/
 dist/
 GeneratorTabel.spec
+build.bat

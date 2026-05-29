@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import *
+from PyQt6.QtWidgets import QFormLayout, QComboBox, QSpinBox, QGroupBox, QWidget,QHBoxLayout,QSizePolicy, QToolButton, QDialog
 from PyQt6.QtCore import pyqtSignal
 from models import TableConfig
 
