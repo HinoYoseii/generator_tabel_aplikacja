@@ -171,7 +171,8 @@ class MainWindow(QMainWindow):
             if not files:
                 QMessageBox.critical(self, "Błąd", "\nNie udało się wygenerować tabel. Sprawdź dane wejściowe i mapowanie wierszy.")
                 return
-            QMessageBox.information(self, "Sukces", f"Wygenerowano {len(files)} tabel w folderze 'tabele'")
+            output_dir = self.table_generator.output_dir
+            QMessageBox.information(self, "Sukces", f"Wygenerowano {len(files)} tabel w folderze:\n{output_dir}")
             self._set_status(f"Wygenerowano {len(files)} tabel w folderze 'tabele'")
             
         except Exception as e:

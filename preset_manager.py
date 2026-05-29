@@ -1,11 +1,15 @@
 from typing import List, Dict
 import json
-import os
 from models import RowPreset, RowStyle, DEFAULT_ROW_PRESETS
+from utils import get_data_path
+import os
 
 class PresetManager: 
-    def __init__(self, config_path: str = "data/PRESETS.json"):
+    def __init__(self, config_path: str | None = None):
+        if config_path is None:
+            config_path = get_data_path("data", "PRESETS.json")
         self.config_path = config_path
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
         self.presets: Dict[str, RowPreset] = {}
         self.load_from_file()
     

@@ -4,3 +4,6 @@ tabele/
 __pycache__/
 TODO.txt
 przesucha.csv
+build/
+dist/
+GeneratorTabel.spec

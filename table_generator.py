@@ -4,10 +4,11 @@ from models import TableConfig
 import math
 import os
 import pandas as pd
+from utils import get_data_path
 
 class TableGenerator:
     def __init__(self):
-        self.output_dir = "tabele"
+        self.output_dir = get_data_path("tabele")
         self.row_height = 40
         self.font_size = 18
         self.margin = 20
