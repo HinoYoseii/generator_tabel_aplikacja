@@ -9,12 +9,11 @@ class PresetEditorDialog(QDialog):
         super().__init__(parent)
         self.presets_manager = presets_manager
         self.editing_name = preset_name
-        self.row_inputs: list[QLineEdit] = []
 
         title = f"Edytuj preset — {preset_name}" if preset_name else "Nowy preset"
         self.setWindowTitle(title)
-        self.setMinimumWidth(420)
-        self.setMinimumHeight(400)
+        self.setMinimumWidth(500)
+        self.setMinimumHeight(500)
         self._setup_ui()
 
         if preset_name:
@@ -75,24 +74,50 @@ class PresetEditorDialog(QDialog):
         row_h.setContentsMargins(0, 0, 0, 0)
         row_h.setSpacing(4)
 
-        line = QLineEdit(text)
-        line.setPlaceholderText("Nazwa wiersza...")
-        row_h.addWidget(line)
-
         remove_btn = QToolButton()
         remove_btn.setText("✕")
         remove_btn.setFixedSize(26, 26)
         remove_btn.setToolTip("Usuń wiersz")
-        remove_btn.clicked.connect(lambda: self._remove_row(row_widget, line))
         row_h.addWidget(remove_btn)
 
+        line = QLineEdit(text)
+        line.setPlaceholderText("Nazwa wiersza...")
+        row_h.addWidget(line)
+        row_widget.line_edit = line
+
+        move_up_btn = QPushButton("↑")
+        move_up_btn.setMaximumWidth(26)
+        move_up_btn.setToolTip("Przesuń wiersz do góry")
+        row_h.addWidget(move_up_btn)
+
+        move_down_btn = QPushButton("↓")
+        move_down_btn.setMaximumWidth(26)
+        move_down_btn.setToolTip("Przesuń wiersz w dół")
+        row_h.addWidget(move_down_btn)
+
+        remove_btn.clicked.connect(lambda: self._remove_row(row_widget))
+        move_up_btn.clicked.connect(lambda: self._move_row_up(row_widget))
+        move_down_btn.clicked.connect(lambda: self._move_row_down(row_widget))
+
         self.rows_layout.addWidget(row_widget)
-        self.row_inputs.append(line)
         line.setFocus()
 
-    def _remove_row(self, row_widget: QWidget, line: QLineEdit):
-        self.row_inputs.remove(line)
+    def _remove_row(self, row_widget: QWidget):
+        self.rows_layout.removeWidget(row_widget)
         row_widget.deleteLater()
+
+    def _move_row_up(self, row_widget: QWidget):
+        self._move_row(row_widget, -1)
+
+    def _move_row_down(self, row_widget: QWidget):
+        self._move_row(row_widget, 1)
+
+    def _move_row(self, row_widget: QWidget, offset: int):
+        index = self.rows_layout.indexOf(row_widget)
+        new_index = index + offset
+        if 0 <= new_index < self.rows_layout.count():
+            self.rows_layout.removeWidget(row_widget)
+            self.rows_layout.insertWidget(new_index, row_widget)
     
     def _delete_preset(self):
         reply = QMessageBox.warning(
@@ -118,7 +143,13 @@ class PresetEditorDialog(QDialog):
             QMessageBox.warning(self, "Błąd", "Podaj nazwę presetu.")
             return
 
-        rows = [i.text().strip() for i in self.row_inputs if i.text().strip()]
+        rows = []
+        for i in range(self.rows_layout.count()):
+            line_edit = self.rows_layout.itemAt(i).widget().line_edit
+            text = line_edit.text().strip()
+            if text:
+                rows.append(text)
+
         if not rows:
             QMessageBox.warning(self, "Błąd", "Preset musi zawierać co najmniej jeden wiersz.")
             return
