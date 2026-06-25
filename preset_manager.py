@@ -121,12 +121,12 @@ class PresetManager:
         
         return background_color_map, text_color_map
 
-    def save_preset(self, name: str, rows: List[str]):
+    def save_preset(self, name: str, rows: List[str], styles=None):
         existing = self.presets.get(name)
         self.presets[name] = RowPreset(
             name=name,
             rows=rows,
-            styles=existing.styles if existing else None
+            styles=styles
         )
         self._save_to_file()
 
